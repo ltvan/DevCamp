@@ -1,8 +1,7 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
-  "parameters": {
-  },
+  "parameters": {},
   "variables": {
     "apiAppName": "[concat('incidentapi', uniqueString(resourceGroup().id))]",
     "dotnetAppName": "[concat('dotnetapp', uniqueString(resourceGroup().id))]",
@@ -14,6 +13,7 @@
     "repoURL": "https://github.com/AzureCAT-GSI/DevCampSharedDotNetAPI.git",
     "repoBranch": "master",
     "storageName": "[substring(toLower(concat('incidentblobstg', uniqueString(resourceGroup().id))), 0, 24)]",
+    "diagStorageName": "[substring(toLower(concat('incidentdiagstg', uniqueString(resourceGroup().id))), 0, 24)]",
     "storageType": "Standard_LRS",
     "queueName": "thumbnails",
     "imgContainerName": "images",
@@ -25,42 +25,19 @@
     "redisCacheSKUCapacity": "1",
     "redisCacheRedisVersion": "3.0",
     "enableNonSslPort": "false",
-    "diagStorageName": "[substring(toLower(concat('incidentdiagstg', uniqueString(resourceGroup().id))), 0, 24)]",
-    "vmStorageName": "[toLower(concat('vmStorage', uniqueString(resourceGroup().id)))]",
-    "devVnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'DevCampVnet')]",
-    "devSubnetRef": "[concat(variables('devVnetID'), '/subnets/', variables('devCampVnetSubnet1Name'))]",
-    "devCampVnetPrefix": "10.0.0.0/16",
-    "devCampVnetSubnet1Name": "Subnet-1",
-    "devCampVnetSubnet1Prefix": "10.0.0.0/24",
-    "ubuntuMachineName": "[substring(concat('ubudev', uniqueString(resourceGroup().id)), 0, 15)]",
-    "ubuntuAdminUserName": "l-admin",
-    "ubuntuAdminPassword": "Devc@mp2016!",
-    "ubuntuOSVersion": "14.04.2-LTS",
-    "ubuntuImagePublisher": "Canonical",
-    "ubuntuImageOffer": "UbuntuServer",
-    "ubuntuOSDiskName": "ubuntuOSDisk",
-    "ubuntuVmSize": "Standard_D2_v2",
-    "ubuntuVnetID": "[resourceId('Microsoft.Network/virtualNetworks', 'DevCampVnet')]",
-    "ubuntuSubnetRef": "[concat(variables('ubuntuVnetID'), '/subnets/', variables('devCampVnetSubnet1Name'))]",
-    "ubuntuStorageAccountContainerName": "vhds",
-    "ubuntuNicName": "[concat(variables('ubuntuMachineName'), 'NetworkInterface')]",
-    "ubuntuDevPipName": "UbuntuDevPip",
-    "ubuntuDevPipDnsName": "[substring(concat('ubudev', uniqueString(resourceGroup().id)), 0, 15)]",
-    "windowsMachineName": "[substring(concat('windev', uniqueString(resourceGroup().id)), 0, 15)]",
-    "windowsAdminUserName": "l-admin",
-    "windowsAdminPassword": "Devc@mp2016!",
-    "windowsWindowsOSVersion": "2012-R2-Datacenter",
-    "windowsImagePublisher": "MicrosoftWindowsServer",
-    "windowsImageOffer": "WindowsServer",
-    "windowsOSDiskName": "WindowsDevOSDisk",
-    "windowsVmSize": "Standard_D2_v2",
-    "windowsStorageAccountContainerName": "vhds",
-    "windowsDevNicName": "[concat(variables('windowsMachineName'), 'NetworkInterface')]",
-    "windowsDevPipName": "WindowsDevPip",
-    "windowsDevPipDnsName": "[substring(concat('windev', uniqueString(resourceGroup().id)), 0, 15)]",
-    "chocoPackages": "sysinternals;7zip.install;nodejs.install;git-credential-winstore;git.install;git;poshgit;sublimetext3;fiddler4;webpicmd;visualstudiocode;eclipse;azurestorageexplorer;office365business;googlechrome;postman;jsonedit;windowsazurepowershell;jre8;javaruntime",
-    "setupChocolateyScriptFileName": "SetupChocolatey.ps1",
-    "setupChocolatelyScriptLocation": "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/visual-studio-dev-vm-chocolatey/scripts/"
+    "devTestLabName": "DevCamp",
+    "devTestLabId": "[resourceId('Microsoft.DevTestLab/labs', variables('devTestLabName'))]",
+    "devTestLabVnetName": "DevCampVnet",
+    "devTestLabVnetId": "[resourceId('Microsoft.DevTestLab/labs/virtualNetworks', variables('devTestLabName'), variables('devTestLabVnetName'))]",
+    "devTestLabVmName": "[concat('DevMachine', '-', take(uniqueString(resourceGroup().id), 3))]",
+    "devTestLabVmSize": "Standard_DS1_v2",
+    "devTestLabVmStorage": "Premium",
+    "devTestLabShutdownTime": "21:00",
+    "devTestLabsTimeZoneId": "UTC",
+    "devTestLabVmUsername": "l-admin",
+    "devTestLabVmPassword": "Devc@mp2016!",
+    "devTestLabVmSizes": "\"Standard_DS1_v2\", \"Standard_DS3_v2\", \"Standard_DS11_v2\"",
+    "chocoPackages": "nodejs,nodejs.install,git-credential-winstore,webpicmd,eclipse,jre8,javaruntime"
   },
   "resources": [
     {
@@ -90,37 +67,38 @@
       }
     },
     {
-      "name": "[variables('vmStorageName')]",
-      "type": "Microsoft.Storage/storageAccounts",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [],
-      "tags": {
-        "displayName": "VmStorage"
-      },
-      "properties": {
-        "accountType": "[variables('storageType')]"
-      }
-    },
-    {
       "name": "[variables('redisCacheName')]",
       "type": "Microsoft.Cache/Redis",
       "location": "[resourceGroup().location]",
       "apiVersion": "2014-04-01-preview",
-      "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', variables('diagStorageName'))]"
-      ],
       "tags": {
         "displayName": "RedisCache"
       },
       "properties": {
+        "enableNonSslPort": "[variables('enableNonSslPort')]",
         "sku": {
           "name": "[variables('redisCacheSKUName')]",
           "family": "[variables('redisCacheSKUFamily')]",
           "capacity": "[variables('redisCacheSKUCapacity')]"
         },
         "redisVersion": "[variables('redisCacheRedisVersion')]"
-      }
+      },
+      "resources": [
+        {
+          "apiVersion": "2015-07-01",
+          "type": "Microsoft.Cache/redis/providers/diagnosticsettings",
+          "name": "[concat(variables('redisCacheName'), '/Microsoft.Insights/service')]",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Storage/storageAccounts/', variables('storageName'))]",
+            "[concat('Microsoft.Cache/Redis/', variables('redisCacheName'))]"
+          ],
+          "properties": {
+            "status": "ON",
+            "storageAccountName": "[variables('diagStorageName')]"
+          }
+        }
+      ]
     },
     {
       "apiVersion": "2015-04-08",
@@ -181,7 +159,8 @@
           "dependsOn": [
             "[concat('Microsoft.Web/sites/', variables('apiAppName'))]",
             "[concat('Microsoft.Storage/storageAccounts/', variables('storageName'))]",
-            "[concat('Microsoft.DocumentDB/databaseAccounts/', variables('docDBName'))]"
+            "[concat('Microsoft.DocumentDB/databaseAccounts/', variables('docDBName'))]",
+            "[concat('Microsoft.Cache/Redis/', variables('redisCacheName'))]"
           ],
           "tags": {
             "displayName": "AppSettings"
@@ -211,10 +190,40 @@
           "properties": {
             "RepoUrl": "[variables('repoURL')]",
             "branch": "[variables('repoBranch')]",
-            "IsManualIntegration": false
+            "IsManualIntegration": true
           },
           "tags": {
             "displayName": "Deployment"
+          }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "logs",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('apiAppName'))]"
+          ],
+          "tags": {
+            "displayName": "Logs"
+          },
+          "properties": {
+            "applicationLogs": {
+              "fileSystem": {
+                "level": "Verbose"
+              }
+            },
+            "httpLogs": {
+              "fileSystem": {
+                "retentionInMb": 40,
+                "enabled": true
+              }
+            },
+            "failedRequestsTracing": {
+              "enabled": true
+            },
+            "detailedErrorMessages": {
+              "enabled": true
+            }
           }
         }
       ]
@@ -242,7 +251,9 @@
           "apiVersion": "2015-08-01",
           "dependsOn": [
             "[concat('Microsoft.Web/sites/', variables('dotnetAppName'))]",
-            "[concat('Microsoft.Web/sites/', variables('apiAppName'))]"
+            "[concat('Microsoft.Web/sites/', variables('apiAppName'))]",
+            "[concat('Microsoft.Storage/storageAccounts/', variables('storageName'))]",
+            "[concat('Microsoft.Cache/Redis/', variables('redisCacheName'))]"
           ],
           "tags": {
             "displayName": "AppSettings"
@@ -258,6 +269,36 @@
             "REDISCACHE_SSLPORT": "[reference(resourceId('Microsoft.Cache/Redis', variables('redisCacheName')), '2014-04-01').sslPort]",
             "REDISCACHE_PRIMARY_KEY": "[listKeys(resourceId('Microsoft.Cache/Redis', variables('redisCacheName')), '2014-04-01').primaryKey]"
           }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "logs",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('dotnetAppName'))]"
+          ],
+          "tags": {
+            "displayName": "Logs"
+          },
+          "properties": {
+            "applicationLogs": {
+              "fileSystem": {
+                "level": "Verbose"
+              }
+            },
+            "httpLogs": {
+              "fileSystem": {
+                "retentionInMb": 40,
+                "enabled": true
+              }
+            },
+            "failedRequestsTracing": {
+              "enabled": true
+            },
+            "detailedErrorMessages": {
+              "enabled": true
+            }
+          }
         }
       ]
     },
@@ -267,8 +308,7 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-08-01",
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
-        "[concat('Microsoft.Web/sites/', variables('apiAppName'))]"
+        "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]"
       ],
       "tags": {
         "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('hostingPlanName'))]": "Resource",
@@ -284,7 +324,10 @@
           "type": "config",
           "apiVersion": "2015-08-01",
           "dependsOn": [
-            "[concat('Microsoft.Web/sites/', variables('nodejsAppName'))]"
+            "[concat('Microsoft.Web/sites/', variables('nodejsAppName'))]",
+            "[concat('Microsoft.Web/sites/', variables('apiAppName'))]",
+            "[concat('Microsoft.Storage/storageAccounts/', variables('storageName'))]",
+            "[concat('Microsoft.Cache/Redis/', variables('redisCacheName'))]"
           ],
           "tags": {
             "displayName": "AppSettings"
@@ -301,6 +344,36 @@
             "REDISCACHE_SSLPORT": "[reference(resourceId('Microsoft.Cache/Redis', variables('redisCacheName')), '2014-04-01').sslPort]",
             "REDISCACHE_PRIMARY_KEY": "[listKeys(resourceId('Microsoft.Cache/Redis', variables('redisCacheName')), '2014-04-01').primaryKey]"
           }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "name": "logs",
+          "type": "config",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('nodejsAppName'))]"
+          ],
+          "tags": {
+            "displayName": "Logs"
+          },
+          "properties": {
+            "applicationLogs": {
+              "fileSystem": {
+                "level": "Verbose"
+              }
+            },
+            "httpLogs": {
+              "fileSystem": {
+                "retentionInMb": 40,
+                "enabled": true
+              }
+            },
+            "failedRequestsTracing": {
+              "enabled": true
+            },
+            "detailedErrorMessages": {
+              "enabled": true
+            }
+          }
         }
       ]
     },
@@ -310,8 +383,7 @@
       "location": "[resourceGroup().location]",
       "apiVersion": "2015-08-01",
       "dependsOn": [
-        "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
-        "[concat('Microsoft.Web/sites/', variables('apiAppName'))]"
+        "[concat('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]"
       ],
       "tags": {
         "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/', variables('hostingPlanName'))]": "Resource",
@@ -340,7 +412,10 @@
           "type": "config",
           "apiVersion": "2015-08-01",
           "dependsOn": [
-            "[concat('Microsoft.Web/sites/', variables('javaAppName'))]"
+            "[concat('Microsoft.Web/sites/', variables('javaAppName'))]",
+            "[concat('Microsoft.Web/sites/', variables('apiAppName'))]",
+            "[concat('Microsoft.Storage/storageAccounts/', variables('storageName'))]",
+            "[concat('Microsoft.Cache/Redis/', variables('redisCacheName'))]"
           ],
           "properties": {
             "AZURE_STORAGE_ACCOUNT": "[variables('storageName')]",
@@ -356,240 +431,178 @@
           "tags": {
             "displayName": "AppSettings"
           }
-        }
-      ]
-    },
-    {
-      "name": "DevCampVnet",
-      "type": "Microsoft.Network/virtualNetworks",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [],
-      "tags": {
-        "displayName": "DevCampVnet"
-      },
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "[variables('devCampVnetPrefix')]"
-          ]
         },
-        "subnets": [
-          {
-            "name": "[variables('devCampVnetSubnet1Name')]",
-            "properties": {
-              "addressPrefix": "[variables('devCampVnetSubnet1Prefix')]"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "[variables('ubuntuNicName')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', 'devCampVnet')]",
-        "[concat('Microsoft.Network/publicIPAddresses/', variables('UbuntuDevPipName'))]"
-      ],
-      "tags": {
-        "displayName": "UbuntuDevNic"
-      },
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "ipconfig1",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[variables('ubuntuSubnetRef')]"
-              },
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('UbuntuDevPipName'))]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "[variables('UbuntuDevPipName')]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [],
-      "tags": {
-        "displayName": "UbuntuDevPip"
-      },
-      "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": {
-          "domainNameLabel": "[variables('ubuntuDevPipDnsName')]"
-        }
-      }
-    },
-    {
-      "name": "[variables('ubuntuMachineName')]",
-      "type": "Microsoft.Compute/virtualMachines",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', variables('vmStorageName'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', variables('ubuntuNicName'))]"
-      ],
-      "tags": {
-        "displayName": "UbuntuDev"
-      },
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "[variables('ubuntuVmSize')]"
-        },
-        "osProfile": {
-          "computerName": "[variables('ubuntuMachineName')]",
-          "adminUsername": "[variables('ubuntuAdminUserName')]",
-          "adminPassword": "[variables('ubuntuAdminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "[variables('ubuntuImagePublisher')]",
-            "offer": "[variables('ubuntuImageOffer')]",
-            "sku": "[variables('ubuntuOSVersion')]",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "ubuntuOSDisk",
-            "vhd": {
-              "uri": "[concat('https://', variables('vmStorageName'), '.blob.core.windows.net/', variables('ubuntuStorageAccountContainerName'), '/', variables('ubuntuOSDiskName'), '.vhd')]"
-            },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
-          }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('ubuntuNicName'))]"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "[variables('windowsDevNicName')]",
-      "type": "Microsoft.Network/networkInterfaces",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', 'devCampVnet')]",
-        "[concat('Microsoft.Network/publicIPAddresses/', variables('WindowsDevPipName'))]"
-      ],
-      "tags": {
-        "displayName": "WindowsDevNic"
-      },
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "ipconfig1",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "subnet": {
-                "id": "[variables('devSubnetRef')]"
-              },
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('WindowsDevPipName'))]"
-              }
-            }
-          }
-        ]
-      }
-    },
-    {
-      "name": "[variables('WindowsDevPipName')]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [],
-      "tags": {
-        "displayName": "WindowsDevPip"
-      },
-      "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": {
-          "domainNameLabel": "[variables('windowsDevPipDnsName')]"
-        }
-      }
-    },
-    {
-      "name": "[variables('windowsMachineName')]",
-      "type": "Microsoft.Compute/virtualMachines",
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
-      "dependsOn": [
-        "[concat('Microsoft.Storage/storageAccounts/', variables('vmStorageName'))]",
-        "[concat('Microsoft.Network/networkInterfaces/', variables('windowsDevNicName'))]"
-      ],
-      "tags": {
-        "displayName": "WindowsDev"
-      },
-      "properties": {
-        "hardwareProfile": {
-          "vmSize": "[variables('windowsVmSize')]"
-        },
-        "osProfile": {
-          "computerName": "[variables('windowsMachineName')]",
-          "adminUsername": "[variables('windowsAdminUserName')]",
-          "adminPassword": "[variables('windowsAdminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "MicrosoftVisualStudio",
-            "offer": "VisualStudio",
-            "sku": "VS-2015-Comm-VSU3-AzureSDK-291-WS2012R2",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "WindowsDevOSDisk",
-            "vhd": {
-              "uri": "[concat('https://', variables('VmStorageName'), '.blob.core.windows.net/', variables('windowsStorageAccountContainerName'), '/', variables('windowsOSDiskName'), '.vhd')]"
-            },
-            "createOption": "FromImage"
-          }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('windowsDevNicName'))]"
-            }
-          ]
-        }
-      },
-      "resources": [
         {
-          "name": "SetupChocolatey",
-          "type": "extensions",
-          "location": "[resourceGroup().location]",
-          "apiVersion": "2015-06-15",
+          "apiVersion": "2015-08-01",
+          "name": "logs",
+          "type": "config",
           "dependsOn": [
-            "[concat('Microsoft.Compute/virtualMachines/', variables('windowsMachineName'))]"
+            "[resourceId('Microsoft.Web/Sites', variables('javaAppName'))]"
           ],
           "tags": {
-            "displayName": "SetupChocolatey"
+            "displayName": "Logs"
           },
           "properties": {
-            "publisher": "Microsoft.Compute",
-            "type": "CustomScriptExtension",
-            "typeHandlerVersion": "1.4",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-              "fileUris": [
-                "[concat(variables('setupChocolatelyScriptLocation'), variables('setupChocolateyScriptFileName'))]"
-              ],
-              "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File ',variables('setupChocolateyScriptFileName'),' ',variables('chocoPackages'),' ')]"
+            "applicationLogs": {
+              "fileSystem": {
+                "level": "Verbose"
+              }
+            },
+            "httpLogs": {
+              "fileSystem": {
+                "retentionInMb": 40,
+                "enabled": true
+              }
+            },
+            "failedRequestsTracing": {
+              "enabled": true
+            },
+            "detailedErrorMessages": {
+              "enabled": true
             }
           }
         }
       ]
+    },
+    {
+      "apiVersion": "2016-05-15",
+      "type": "Microsoft.DevTestLab/labs",
+      "name": "[variables('devTestLabName')]",
+      "location": "[resourceGroup().location]",
+      "resources": [
+        {
+          "apiVersion": "2016-05-15",
+          "name": "[variables('devTestLabVnetName')]",
+          "type": "virtualnetworks",
+          "dependsOn": [
+            "[variables('devTestLabId')]"
+          ]
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "LabVmsShutdown",
+          "type": "schedules",
+          "dependsOn": [
+            "[variables('devTestLabId')]"
+          ],
+          "properties": {
+            "status": "Enabled",
+            "timeZoneId": "[variables('devTestLabsTimeZoneId')]",
+            "taskType": "LabVmsShutdownTask",
+            "dailyRecurrence": {
+              "time": "[replace(variables('devTestLabShutdownTime'), ':', '')]"
+            }
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/MaxVmsAllowedPerUser",
+          "type": "policysets/policies",
+          "dependsOn": [
+            "[variables('devTestLabId')]"
+          ],
+          "properties": {
+            "description": "",
+            "factName": "UserOwnedLabVmCount",
+            "threshold": 5,
+            "evaluatorType": "MaxValuePolicy",
+            "status": "enabled"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/MaxVmsAllowedPerLab",
+          "type": "policysets/policies",
+          "dependsOn": [
+            "[variables('devTestLabId')]"
+          ],
+          "properties": {
+            "description": "",
+            "factName": "LabVmCount",
+            "threshold": 25,
+            "evaluatorType": "MaxValuePolicy",
+            "status": "enabled"
+          }
+        },
+        {
+          "apiVersion": "2016-05-15",
+          "name": "default/AllowedVmSizesInLab",
+          "type": "policysets/policies",
+          "dependsOn": [
+            "[variables('devTestLabId')]"
+          ],
+          "properties": {
+            "description": "VM sizes allowed for creation in lab",
+            "factName": "LabVmSize",
+            "threshold": "[concat('[', trim(variables('devTestLabVmSizes')), ']')]",
+            "evaluatorType": "AllowedValuesPolicy",
+            "status": "enabled"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2016-05-15",
+      "type": "Microsoft.DevTestLab/labs/virtualmachines",
+      "name": "[concat(variables('devTestLabName'), '/', variables('devTestLabVmName'))]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[variables('devTestLabVnetId')]"
+      ],
+      "properties": {
+        "labVirtualNetworkId": "[variables('devTestLabVnetId')]",
+        "labSubnetName": "[concat(variables('devTestLabVnetName'), 'Subnet')]",
+        "notes": "Windows Server 2012 R2 Datacenter",
+        "galleryImageReference": {
+          "offer": "VisualStudio",
+          "publisher": "MicrosoftVisualStudio",
+          "sku": "VS-2015-Comm-VSU3-AzureSDK-291-WS2012R2",
+          "osType": "Windows",
+          "version": "latest"
+        },
+        "size": "[variables('devTestLabVmSize')]",
+        "storageType": "[variables('devTestLabVmStorage')]",
+        "userName": "[variables('devTestLabVmUsername')]",
+        "password": "[variables('devTestLabVmPassword')]",
+        "isAuthenticationWithSshKey": false,
+        "disallowPublicIpAddress": false,
+        "allowClaim": false,
+        "artifacts": [
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-chrome')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-firefox')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-git')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-powershell3')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-putty')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-sublime-text')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-sysinternals')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-vscode')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-chocolatey')]",
+            "parameters": [
+              {
+                "name": "packages",
+                "value": "[variables('chocoPackages')]"
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
