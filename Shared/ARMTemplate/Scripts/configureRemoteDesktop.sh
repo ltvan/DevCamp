@@ -18,6 +18,7 @@ sudo apt-get -y install xfce4
 
 # Run RDP service
 echo "Starting XRDP service"
+sudo service xrdp start
 
 # Finished
 echo "Finished setting up remote desktop for this machine"
