@@ -25,22 +25,22 @@
     "redisCacheSKUCapacity": "1",
     "redisCacheRedisVersion": "3.0",
     "enableNonSslPort": "false",
-    "devTestLabName": "DevCamp",
-    "devTestLabId": "[resourceId('Microsoft.DevTestLab/labs', variables('devTestLabName'))]",
-    "devTestLabVnetName": "DevCampVnet",
-    "devTestLabVnetId": "[resourceId('Microsoft.DevTestLab/labs/virtualNetworks', variables('devTestLabName'), variables('devTestLabVnetName'))]",
-    "devTestLabVmName": "[concat('DevMachine', '-', take(uniqueString(resourceGroup().id), 3))]",
-    "devTestLabVmSize": "Standard_DS1_v2",
-    "devTestLabVmStorage": "Premium",
-    "devTestLabShutdownTime": "21:00",
-    "devTestLabsTimeZoneId": "UTC",
-    "devTestLabVmUsername": "l-admin",
-    "devTestLabVmPassword": "Devc@mp2016!",
-    "devTestLabVmSizes": "\"Standard_DS1_v2\", \"Standard_DS3_v2\", \"Standard_DS11_v2\"",
-    "chocoPackages": "nodejs,nodejs.install,git-credential-winstore,webpicmd,eclipse,jre8,javaruntime",
-    "devTestLabAptPackages": "eclipse libwebkitgtk-1.0-0",
+    "dtlName": "DevCamp",
+    "dtlId": "[resourceId('Microsoft.DevTestLab/labs', variables('dtlName'))]",
+    "dtlVnetName": "DevCampVnet",
+    "dtlVnetId": "[resourceId('Microsoft.DevTestLab/labs/virtualNetworks', variables('dtlName'), variables('dtlVnetName'))]",
+    "dtlVmName": "[concat('Dev', '-', take(uniqueString(resourceGroup().id), 4))]",
+    "dtlVmSizes": "\"Standard_DS1_v2\", \"Standard_DS3_v2\", \"Standard_DS11_v2\"",
+    "dtlVmSize": "Standard_DS1_v2",
+    "dtlVmStorage": "Premium",
+    "dtlShutdownTime": "21:00",
+    "dtlTimeZoneId": "UTC",
+    "dtlVmUsername": "l-admin",
+    "dtlVmPassword": "Devc@mp2016!",
+    "dtlVmAptPackages": "eclipse libwebkitgtk-1.0-0",
     "dtlVMLinuxRDPFile": "[[\"https://raw.githubusercontent.com/AzureCAT-GSI/DevCamp/vNext/Shared/ARMTemplate/Scripts/configureRemoteDesktop.sh\"]",
-    "dtlVMLinuxRDPRun": "configureRemoteDesktop.sh"
+    "dtlVMLinuxRDPRun": "configureRemoteDesktop.sh",
+    "chocoPackages": "nodejs,nodejs.install,git-credential-winstore,webpicmd,eclipse,jre8,javaruntime"
   },
   "resources": [
     {
@@ -470,15 +470,15 @@
     {
       "apiVersion": "2016-05-15",
       "type": "Microsoft.DevTestLab/labs",
-      "name": "[variables('devTestLabName')]",
+      "name": "[variables('dtlName')]",
       "location": "[resourceGroup().location]",
       "resources": [
         {
           "apiVersion": "2016-05-15",
-          "name": "[variables('devTestLabVnetName')]",
+          "name": "[variables('dtlVnetName')]",
           "type": "virtualnetworks",
           "dependsOn": [
-            "[variables('devTestLabId')]"
+            "[variables('dtlId')]"
           ]
         },
         {
@@ -486,14 +486,14 @@
           "name": "LabVmsShutdown",
           "type": "schedules",
           "dependsOn": [
-            "[variables('devTestLabId')]"
+            "[variables('dtlId')]"
           ],
           "properties": {
             "status": "Enabled",
-            "timeZoneId": "[variables('devTestLabsTimeZoneId')]",
+            "timeZoneId": "[variables('dtlTimeZoneId')]",
             "taskType": "LabVmsShutdownTask",
             "dailyRecurrence": {
-              "time": "[replace(variables('devTestLabShutdownTime'), ':', '')]"
+              "time": "[replace(variables('dtlShutdownTime'), ':', '')]"
             }
           }
         },
@@ -502,7 +502,7 @@
           "name": "default/MaxVmsAllowedPerUser",
           "type": "policysets/policies",
           "dependsOn": [
-            "[variables('devTestLabId')]"
+            "[variables('dtlId')]"
           ],
           "properties": {
             "description": "",
@@ -517,7 +517,7 @@
           "name": "default/MaxVmsAllowedPerLab",
           "type": "policysets/policies",
           "dependsOn": [
-            "[variables('devTestLabId')]"
+            "[variables('dtlId')]"
           ],
           "properties": {
             "description": "",
@@ -532,12 +532,12 @@
           "name": "default/AllowedVmSizesInLab",
           "type": "policysets/policies",
           "dependsOn": [
-            "[variables('devTestLabId')]"
+            "[variables('dtlId')]"
           ],
           "properties": {
             "description": "VM sizes allowed for creation in lab",
             "factName": "LabVmSize",
-            "threshold": "[concat('[', trim(variables('devTestLabVmSizes')), ']')]",
+            "threshold": "[concat('[', trim(variables('dtlVmSizes')), ']')]",
             "evaluatorType": "AllowedValuesPolicy",
             "status": "enabled"
           }
@@ -547,15 +547,15 @@
     {
       "apiVersion": "2016-05-15",
       "type": "Microsoft.DevTestLab/labs/virtualmachines",
-      "name": "[concat(variables('devTestLabName'), '/', variables('devTestLabVmName'))]",
+      "name": "[concat(variables('dtlName'), '/', 'Win', variables('dtlVmName'))]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[variables('devTestLabVnetId')]"
+        "[variables('dtlVnetId')]"
       ],
       "properties": {
-        "labVirtualNetworkId": "[variables('devTestLabVnetId')]",
-        "labSubnetName": "[concat(variables('devTestLabVnetName'), 'Subnet')]",
-        "notes": "Windows Server 2012 R2 Datacenter",
+        "labVirtualNetworkId": "[variables('dtlVnetId')]",
+        "labSubnetName": "[concat(variables('dtlVnetName'), 'Subnet')]",
+        "notes": "WinServer 2012R2 DC + VS2015",
         "galleryImageReference": {
           "offer": "VisualStudio",
           "publisher": "MicrosoftVisualStudio",
@@ -563,40 +563,40 @@
           "osType": "Windows",
           "version": "latest"
         },
-        "size": "[variables('devTestLabVmSize')]",
-        "storageType": "[variables('devTestLabVmStorage')]",
-        "userName": "[variables('devTestLabVmUsername')]",
-        "password": "[variables('devTestLabVmPassword')]",
+        "size": "[variables('dtlVmSize')]",
+        "storageType": "[variables('dtlVmStorage')]",
+        "userName": "[variables('dtlVmUsername')]",
+        "password": "[variables('dtlVmPassword')]",
         "isAuthenticationWithSshKey": false,
         "disallowPublicIpAddress": false,
         "allowClaim": false,
         "artifacts": [
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-chrome')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-chrome')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-firefox')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-firefox')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-git')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-git')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-powershell3')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-powershell3')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-putty')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-putty')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-sublime-text')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-sublime-text')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-sysinternals')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-sysinternals')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-vscode')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-vscode')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'windows-chocolatey')]",
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'windows-chocolatey')]",
             "parameters": [
               {
                 "name": "packages",
@@ -610,15 +610,15 @@
     {
       "apiVersion": "2016-05-15",
       "type": "Microsoft.DevTestLab/labs/virtualmachines",
-      "name": "[concat(variables('devTestLabName'), '/', 'Linux', variables('devTestLabVmName'))]",
+      "name": "[concat(variables('dtlName'), '/', 'Linux', variables('dtlVmName'))]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[variables('devTestLabVnetId')]"
+        "[variables('dtlVnetId')]"
       ],
       "properties": {
-        "labVirtualNetworkId": "[variables('devTestLabVnetId')]",
-        "labSubnetName": "[concat(variables('devTestLabVnetName'), 'Subnet')]",
-        "notes": "Linux Dev Machine on Ubuntu 16.04",
+        "labVirtualNetworkId": "[variables('dtlVnetId')]",
+        "labSubnetName": "[concat(variables('dtlVnetName'), 'Subnet')]",
+        "notes": "Ubuntu 16.04 + XFCE",
         "galleryImageReference": {
           "offer": "UbuntuServer",
           "publisher": "Canonical",
@@ -626,16 +626,16 @@
           "osType": "Linux",
           "version": "latest"
         },
-        "size": "[variables('devTestLabVmSize')]",
-        "storageType": "[variables('devTestLabVmStorage')]",
-        "userName": "[variables('devTestLabVmUsername')]",
-        "password": "[variables('devTestLabVmPassword')]",
+        "size": "[variables('dtlVmSize')]",
+        "storageType": "[variables('dtlVmStorage')]",
+        "userName": "[variables('dtlVmUsername')]",
+        "password": "[variables('dtlVmPassword')]",
         "isAuthenticationWithSshKey": false,
         "disallowPublicIpAddress": false,
         "allowClaim": false,
         "artifacts": [
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-run-bash')]",
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'linux-run-bash')]",
             "parameters": [
               {
                 "name": "scriptFileUris",
@@ -652,17 +652,17 @@
             ]
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-java')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'linux-java')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-install-nodejs')]"
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'linux-install-nodejs')]"
           },
           {
-            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-apt-package')]",
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('dtlName'), 'public repo', 'linux-apt-package')]",
             "parameters": [
               {
                 "name": "packages",
-                "value": "[variables('devTestLabAptPackages')]"
+                "value": "[variables('dtlVmAptPackages')]"
               },
               {
                 "name": "update",
