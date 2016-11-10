@@ -37,7 +37,10 @@
     "devTestLabVmUsername": "l-admin",
     "devTestLabVmPassword": "Devc@mp2016!",
     "devTestLabVmSizes": "\"Standard_DS1_v2\", \"Standard_DS3_v2\", \"Standard_DS11_v2\"",
-    "chocoPackages": "nodejs,nodejs.install,git-credential-winstore,webpicmd,eclipse,jre8,javaruntime"
+    "chocoPackages": "nodejs,nodejs.install,git-credential-winstore,webpicmd,eclipse,jre8,javaruntime",
+    "devTestLabAptPackages": "eclipse libwebkitgtk-1.0-0",
+    "dtlVMLinuxRDPFile": "[[\"https://raw.githubusercontent.com/AzureCAT-GSI/DevCamp/vNext/Shared/ARMTemplate/Scripts/configureRemoteDesktop.sh\"]",
+    "dtlVMLinuxRDPRun": "configureRemoteDesktop.sh"
   },
   "resources": [
     {
@@ -598,6 +601,76 @@
               {
                 "name": "packages",
                 "value": "[variables('chocoPackages')]"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2016-05-15",
+      "type": "Microsoft.DevTestLab/labs/virtualmachines",
+      "name": "[concat(variables('devTestLabName'), '/', 'Linux', variables('devTestLabVmName'))]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[variables('devTestLabVnetId')]"
+      ],
+      "properties": {
+        "labVirtualNetworkId": "[variables('devTestLabVnetId')]",
+        "labSubnetName": "[concat(variables('devTestLabVnetName'), 'Subnet')]",
+        "notes": "Linux Dev Machine on Ubuntu 16.04",
+        "galleryImageReference": {
+          "offer": "UbuntuServer",
+          "publisher": "Canonical",
+          "sku": "16.04.0-LTS",
+          "osType": "Linux",
+          "version": "latest"
+        },
+        "size": "[variables('devTestLabVmSize')]",
+        "storageType": "[variables('devTestLabVmStorage')]",
+        "userName": "[variables('devTestLabVmUsername')]",
+        "password": "[variables('devTestLabVmPassword')]",
+        "isAuthenticationWithSshKey": false,
+        "disallowPublicIpAddress": false,
+        "allowClaim": false,
+        "artifacts": [
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-run-bash')]",
+            "parameters": [
+              {
+                "name": "scriptFileUris",
+                "value": "[variables('dtlVMLinuxRDPFile')]"
+              },
+              {
+                "name": "scriptToRun",
+                "value": "[variables('dtlVMLinuxRDPRun')]"
+              },
+              {
+                "name": "scriptArguments",
+                "value": ""
+              }
+            ]
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-java')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-install-nodejs')]"
+          },
+          {
+            "artifactId": "[resourceId('Microsoft.DevTestLab/labs/artifactSources/artifacts', variables('devTestLabName'), 'public repo', 'linux-apt-package')]",
+            "parameters": [
+              {
+                "name": "packages",
+                "value": "[variables('devTestLabAptPackages')]"
+              },
+              {
+                "name": "update",
+                "value": "true"
+              },
+              {
+                "name": "options",
+                "value": ""
               }
             ]
           }
