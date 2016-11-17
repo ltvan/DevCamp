@@ -57,6 +57,10 @@
       <HintPath>..\packages\Microsoft.Owin.3.0.1\lib\net45\Microsoft.Owin.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Microsoft.Rest.ClientRuntime, Version=0.9.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Rest.ClientRuntime.0.9.6\lib\net45\Microsoft.Rest.ClientRuntime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
@@ -134,6 +138,13 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="IncidentAPIClient\IIncidentAPIClient.cs" />
+    <Compile Include="IncidentAPIClient\IIncidentOperations.cs" />
+    <Compile Include="IncidentAPIClient\IncidentAPIClient.cs" />
+    <Compile Include="IncidentAPIClient\IncidentAPIClientExtensions.cs" />
+    <Compile Include="IncidentAPIClient\IncidentOperations.cs" />
+    <Compile Include="IncidentAPIClient\IncidentOperationsExtensions.cs" />
+    <Compile Include="IncidentAPIClient\Models\Incident.cs" />
     <Compile Include="Mappers\IncidentMapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Utils\RedisCacheHelper.cs" />
