@@ -48,10 +48,26 @@ namespace DevCamp.WebApp.Controllers
                     using (IncidentAPIClient client = IncidentApiHelper.GetIncidentAPIClient())
                     {
                         var result = client.Incident.CreateIncident(incidentToSave);
+                        RedisCacheHelper.ClearCache(Settings.REDISCCACHE_KEY_INCIDENTDATA);
                         if (!string.IsNullOrEmpty(result))
                         {
                             incidentToSave = JsonConvert.DeserializeObject<Incident>(result);
                         }
+                    }
+                    //Now upload the file if there is one
+                    if (imageFile != null && imageFile.ContentLength > 0)
+                    {
+                        //### Add Blob Upload code here #####
+                        //Give the image a unique name based on the incident id
+                        var imageUrl = await StorageHelper.UploadFileToBlobStorage(incidentToSave.ID, imageFile);
+                        //### Add Blob Upload code here #####
+
+
+                        //### Add Queue code here #####
+                        //Add a message to the queue to process this image
+                        await StorageHelper.AddMessageToQueue(incidentToSave.ID, imageFile.FileName);
+                        //### Add Queue code here #####
+
                     }
 
                     return RedirectToAction("Index", "Dashboard");

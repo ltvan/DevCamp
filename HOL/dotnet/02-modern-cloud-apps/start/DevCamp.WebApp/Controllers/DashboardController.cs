@@ -17,14 +17,26 @@ namespace DevCamp.WebApp.Controllers
             List<Incident> incidents;
             using (var client = IncidentApiHelper.GetIncidentAPIClient())
             {
-                var results = await client.Incident.GetAllIncidentsAsync();
-                incidents = JsonConvert.DeserializeObject<List<Incident>>(results);
+                //##### Add caching here #####
+                int CACHE_EXPIRATION_SECONDS = 60;
+
+                //Check Cache
+                string cachedData = string.Empty;
+                if (RedisCacheHelper.UseCachedDataSet(Settings.REDISCCACHE_KEY_INCIDENTDATA, out cachedData))
+                {
+                    incidents = JsonConvert.DeserializeObject<List<Incident>>(cachedData);
+                }
+                else
+                {
+                    //If stale refresh
+                    var results = await client.Incident.GetAllIncidentsAsync();
+                    incidents = JsonConvert.DeserializeObject<List<Incident>>(results);
+                    RedisCacheHelper.AddtoCache(Settings.REDISCCACHE_KEY_INCIDENTDATA, incidents, CACHE_EXPIRATION_SECONDS);
+                }
             }
+            //##### API DATA HERE #####
+            //##### Add caching here #####            //##### API DATA HERE #####
             return View(incidents);
-            //##### API DATA HERE #####
-            //##### ADD CACHING HERE #####
-            //##### ADD CACHING HERE #####
-            //##### API DATA HERE #####
 
         }
     }
